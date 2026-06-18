@@ -534,6 +534,34 @@ function decodeState(code) {
   };
 }
 
+/* URLハッシュに状態を載せる（共有・復元用） */
+function readHashState() {
+  try {
+    const h = (typeof location !== "undefined" ? location.hash : "").replace(/^#/, "");
+    if (!h) return null;
+    const m = h.match(/(?:^|[?&])s=([^&]+)/);
+    const code = m ? decodeURIComponent(m[1]) : h;
+    if (!/v1\./.test(code)) return null;
+    return decodeState(code);
+  } catch (_) {
+    return null;
+  }
+}
+function writeHashState(u, o) {
+  try {
+    const code = encodeState(u, o);
+    const url = location.pathname + location.search + "#s=" + code;
+    history.replaceState(null, "", url);
+  } catch (_) {}
+}
+function shareUrl(u, o) {
+  try {
+    return location.origin + location.pathname + location.search + "#s=" + encodeState(u, o);
+  } catch (_) {
+    return "#s=" + encodeState(u, o);
+  }
+}
+
 /* ============================================================ */
 function App() {
   const [unlocked, setUnlocked] = useState({});
@@ -550,19 +578,34 @@ function App() {
   const [importMsg, setImportMsg] = useState("");
   const shareRef = useRef(null);
 
-  /* 読み込み */
+  /* 読み込み：URL（共有リンク）が最優先、無ければ保存データ */
   useEffect(() => {
     (async () => {
+      const fromHash = readHashState();
+      if (fromHash) {
+        setUnlocked(fromHash.unlocked);
+        setOwned(fromHash.owned);
+        stateRef.current = fromHash;
+        writeNow(fromHash.unlocked, fromHash.owned); // 端末にも保存
+        setLoaded(true);
+        return;
+      }
       const raw = await store.get(SKEY);
       if (raw) {
         try {
           const d = JSON.parse(raw);
           setUnlocked(d.unlocked || {});
           setOwned(d.owned || {});
+          stateRef.current = {
+            unlocked: d.unlocked || {},
+            owned: d.owned || {}
+          };
+          writeHashState(d.unlocked || {}, d.owned || {}); // URLにも反映
         } catch (_) {}
       }
       setLoaded(true);
     })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   /* 保存：書き込みはまとめて行う（連打でブリッジ呼び出しが詰まらないように） */
@@ -577,6 +620,7 @@ function App() {
       owned: o,
       savedAt: Date.now()
     }));
+    writeHashState(u, o);
   }, []);
   const flushNow = useCallback(() => {
     if (writeTimer.current) {
@@ -649,8 +693,7 @@ function App() {
     writeNow({}, {});
   };
   const genShare = () => {
-    const code = encodeState(unlocked, owned);
-    setShareCode(code);
+    setShareCode(shareUrl(unlocked, owned));
     setCopied(false);
     setCopyMsg("");
   };
@@ -665,7 +708,7 @@ function App() {
     }
   };
   const copyShare = async () => {
-    const code = shareCode || encodeState(unlocked, owned);
+    const code = shareCode || shareUrl(unlocked, owned);
     setShareCode(code);
     await new Promise(r => setTimeout(r, 0));
     selectShareField();
@@ -807,19 +850,19 @@ function App() {
     style: S.panelTitle
   }, "状態の保存・共有"), /*#__PURE__*/React.createElement("p", {
     style: S.panelHint
-  }, "チェックはこの端末に自動保存されます。下の", /*#__PURE__*/React.createElement("b", null, "共有コード"), "をコピーしておけば、別の端末や別の人に渡して同じ状態を復元できます。"), /*#__PURE__*/React.createElement("div", {
+  }, "チェックはこの端末に自動保存され、", /*#__PURE__*/React.createElement("b", null, "現在のURLにも状態が埋め込まれます"), "。下の", /*#__PURE__*/React.createElement("b", null, "共有URL"), "をブックマーク／別端末で開くと同じ状態を復元できます（URL末尾の ", /*#__PURE__*/React.createElement("code", null, "#s=…"), " が状態です）。"), /*#__PURE__*/React.createElement("div", {
     style: S.codeRow
   }, /*#__PURE__*/React.createElement("input", {
     ref: shareRef,
     style: S.codeInput,
     readOnly: true,
     value: shareCode,
-    placeholder: "「コード生成」を押すと表示されます",
+    placeholder: "「URL生成」を押すと表示されます",
     onFocus: e => e.target.select()
   }), /*#__PURE__*/React.createElement("button", {
     style: S.smallBtn,
     onClick: genShare
-  }, "コード生成"), /*#__PURE__*/React.createElement("button", {
+  }, "URL生成"), /*#__PURE__*/React.createElement("button", {
     style: {
       ...S.smallBtn,
       ...S.primaryBtn
@@ -835,7 +878,7 @@ function App() {
     style: S.codeInput,
     value: importCode,
     onChange: e => setImportCode(e.target.value),
-    placeholder: "共有コードを貼り付けて読み込み"
+    placeholder: "共有URL（または #s= 以降のコード）を貼り付けて読み込み"
   }), /*#__PURE__*/React.createElement("button", {
     style: S.smallBtn,
     onClick: applyImport
@@ -946,7 +989,10 @@ function App() {
           ...S.pill,
           ...(unl ? S.pillUnlockOn : {})
         },
-        onClick: () => toggleUnlocked(m.key),
+        onClick: e => {
+          e.currentTarget.blur();
+          toggleUnlocked(m.key);
+        },
         title: "コンテンツを解放した"
       }, unl && /*#__PURE__*/React.createElement(Check, {
         size: 11,
@@ -960,7 +1006,10 @@ function App() {
             borderColor: g.accent
           } : {})
         },
-        onClick: () => toggleOwned(m.key),
+        onClick: e => {
+          e.currentTarget.blur();
+          toggleOwned(m.key);
+        },
         title: "マウントを取得した"
       }, has && /*#__PURE__*/React.createElement(Check, {
         size: 11,
