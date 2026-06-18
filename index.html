@@ -1,0 +1,1596 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+<title>FF14 マウント取得チェックリスト</title>
+<meta name="description" content="FF14の極蛮神・零式マウントの解放/取得を記録できるチェックリスト。" />
+<style>
+  html, body { height: 100%; }
+  body { margin: 0; background: #0c1322; }
+  #root { min-height: 100%; }
+</style>
+<script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+<script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+</head>
+<body>
+<div id="root"></div>
+<script>
+const {
+  useState,
+  useEffect,
+  useCallback,
+  useMemo,
+  useRef
+} = React;
+
+/* lucide風インラインアイコン */
+function mkIcon(children) {
+  return function Icon(props) {
+    const {
+      size = 18,
+      color = "currentColor",
+      strokeWidth = 2,
+      style,
+      ...rest
+    } = props || {};
+    return React.createElement("svg", {
+      xmlns: "http://www.w3.org/2000/svg",
+      width: size,
+      height: size,
+      viewBox: "0 0 24 24",
+      fill: "none",
+      stroke: color,
+      strokeWidth,
+      strokeLinecap: "round",
+      strokeLinejoin: "round",
+      style,
+      ...rest
+    }, children.map((c, i) => React.createElement(c[0], {
+      key: i,
+      ...c[1]
+    })));
+  };
+}
+const Check = mkIcon([["polyline", {
+  points: "20 6 9 17 4 12"
+}]]);
+const Crown = mkIcon([["path", {
+  d: "M11.562 3.266a.5.5 0 0 1 .876 0L15.39 8.87a1 1 0 0 0 1.516.294L21.183 5.5a.5.5 0 0 1 .798.519l-2.834 10.246a1 1 0 0 1-.956.734H5.81a1 1 0 0 1-.957-.734L2.02 6.02a.5.5 0 0 1 .798-.519l4.276 3.664a1 1 0 0 0 1.516-.294z"
+}], ["path", {
+  d: "M5 21h14"
+}]]);
+const Sparkles = mkIcon([["path", {
+  d: "M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z"
+}]]);
+const Settings2 = mkIcon([["path", {
+  d: "M20 7h-9"
+}], ["path", {
+  d: "M14 17H5"
+}], ["circle", {
+  cx: 17,
+  cy: 17,
+  r: 3
+}], ["circle", {
+  cx: 7,
+  cy: 7,
+  r: 3
+}]]);
+const RotateCcw = mkIcon([["path", {
+  d: "M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"
+}], ["path", {
+  d: "M3 3v5h5"
+}]]);
+const Camera = mkIcon([["path", {
+  d: "M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"
+}], ["circle", {
+  cx: 12,
+  cy: 13,
+  r: 3
+}]]);
+const List = mkIcon([["path", {
+  d: "M8 6h13"
+}], ["path", {
+  d: "M8 12h13"
+}], ["path", {
+  d: "M8 18h13"
+}], ["path", {
+  d: "M3 6h.01"
+}], ["path", {
+  d: "M3 12h.01"
+}], ["path", {
+  d: "M3 18h.01"
+}]]);
+const Copy = mkIcon([["rect", {
+  width: 14,
+  height: 14,
+  x: 8,
+  y: 8,
+  rx: 2,
+  ry: 2
+}], ["path", {
+  d: "M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"
+}]]);
+const ClipboardPaste = mkIcon([["path", {
+  d: "M15 2H9a1 1 0 0 0-1 1v2a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V3a1 1 0 0 0-1-1z"
+}], ["path", {
+  d: "M8 4H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2h-2"
+}]]);
+
+/* ============================================================ *
+ * データ定義（パッチ7.5時点のJPロードストーン表記で検証済み）
+ *  kind: "ex"=極蛮神, "sav"=零式
+ *  reward: コンプリート報酬マウント（極のみ）
+ * ============================================================ */
+const GROUPS = [
+// ---------------- 極蛮神 ----------------
+{
+  id: "arr",
+  kind: "ex",
+  label: "新生エオルゼア",
+  tag: "極",
+  accent: "#f0a04b",
+  reward: {
+    name: "麒麟",
+    note: "馬6種コンプ"
+  },
+  rows: [{
+    key: "ifrit",
+    duty: "極イフリート討滅戦",
+    mount: "アイトーン"
+  }, {
+    key: "garuda",
+    duty: "極ガルーダ討滅戦",
+    mount: "クサントス"
+  }, {
+    key: "titan",
+    duty: "極タイタン討滅戦",
+    mount: "グルファクシ"
+  }, {
+    key: "leviathan",
+    duty: "極リヴァイアサン討滅戦",
+    mount: "エンバール"
+  }, {
+    key: "ramuh",
+    duty: "極ラムウ討滅戦",
+    mount: "マルカブ"
+  }, {
+    key: "shiva",
+    duty: "極シヴァ討滅戦",
+    mount: "ボレアス"
+  }]
+}, {
+  id: "hw",
+  kind: "ex",
+  label: "蒼天のイシュガルド",
+  tag: "極",
+  accent: "#5db1e0",
+  reward: {
+    name: "鳳凰",
+    note: "鳥7種コンプ"
+  },
+  rows: [{
+    key: "bismarck",
+    duty: "極ビスマルク討滅戦",
+    mount: "ホワイトラナー"
+  }, {
+    key: "ravana",
+    duty: "極ラーヴァナ討滅戦",
+    mount: "ラースラナー"
+  }, {
+    key: "thordan",
+    duty: "蒼天幻想 ナイツ・オブ・ラウンド討滅戦",
+    mount: "ラナー・オブ・ラウンド"
+  }, {
+    key: "sephirot",
+    duty: "極魔神セフィロト討滅戦",
+    mount: "ウォーリングラナー"
+  }, {
+    key: "nidhogg",
+    duty: "極ニーズヘッグ征竜戦",
+    mount: "ダークラナー"
+  }, {
+    key: "sophia",
+    duty: "極女神ソフィア討滅戦",
+    mount: "ゴッデスラナー"
+  }, {
+    key: "zurvan",
+    duty: "極ズルワーン討滅戦",
+    mount: "デモンラナー"
+  }]
+}, {
+  id: "sb",
+  kind: "ex",
+  label: "紅蓮のリベレーター",
+  tag: "極",
+  accent: "#e8615a",
+  reward: {
+    name: "九尾のカムイ",
+    note: "犬7種コンプ"
+  },
+  rows: [{
+    key: "susano",
+    duty: "極スサノオ討滅戦",
+    mount: "豪のカムイ"
+  }, {
+    key: "lakshmi",
+    duty: "極ラクシュミ討滅戦",
+    mount: "美のカムイ"
+  }, {
+    key: "shinryu",
+    duty: "極神龍討滅戦",
+    mount: "龍のカムイ"
+  }, {
+    key: "tsukuyomi",
+    duty: "極ツクヨミ討滅戦",
+    mount: "夜のカムイ"
+  }, {
+    key: "byakko",
+    duty: "白虎征魂戦",
+    mount: "白のカムイ"
+  }, {
+    key: "suzaku",
+    duty: "朱雀征魂戦",
+    mount: "朱のカムイ"
+  }, {
+    key: "seiryu",
+    duty: "青龍征魂戦",
+    mount: "青のカムイ"
+  }]
+}, {
+  id: "shb",
+  kind: "ex",
+  label: "漆黒のヴィランズ",
+  tag: "極",
+  accent: "#8b6fc7",
+  reward: {
+    name: "レンダーバッフェ",
+    note: "竜7種コンプ"
+  },
+  rows: [{
+    key: "titania",
+    duty: "極ティターニア討滅戦",
+    mount: "ピクシーグイベル"
+  }, {
+    key: "innocence",
+    duty: "極イノセンス討滅戦",
+    mount: "イノセントグイベル"
+  }, {
+    key: "hades",
+    duty: "極ハーデス討滅戦",
+    mount: "シャドウグイベル"
+  }, {
+    key: "ruby",
+    duty: "極ルビーウェポン破壊作戦",
+    mount: "ルビーグイベル"
+  }, {
+    key: "wol",
+    duty: "極ウォーリア・オブ・ライト討滅戦",
+    mount: "グイベル・オブ・ライト"
+  }, {
+    key: "emerald",
+    duty: "極エメラルドウェポン破壊作戦",
+    mount: "エメラルドグイベル"
+  }, {
+    key: "diamond",
+    duty: "極ダイヤウェポン捕獲作戦",
+    mount: "ダイヤグイベル"
+  }]
+}, {
+  id: "ew",
+  kind: "ex",
+  label: "暁月のフィナーレ",
+  tag: "極",
+  accent: "#5fc9b0",
+  reward: {
+    name: "バハムート",
+    note: "豹7種コンプ"
+  },
+  rows: [{
+    key: "hydaelyn",
+    duty: "極ハイデリン討滅戦",
+    mount: "ディヴァインライト・リンクス"
+  }, {
+    key: "zodiark",
+    duty: "極ゾディアーク討滅戦",
+    mount: "エターナルダークネス・リンクス"
+  }, {
+    key: "endsinger",
+    duty: "終極の戦い",
+    mount: "ブルーフェザー・リンクス"
+  }, {
+    key: "barbariccia",
+    duty: "極バルバリシア討滅戦",
+    mount: "リンクス・オブ・ウィンド"
+  }, {
+    key: "rubicante",
+    duty: "極ルビカンテ討滅戦",
+    mount: "リンクス・オブ・ファイア"
+  }, {
+    key: "golbez",
+    duty: "極ゴルベーザ討滅戦",
+    mount: "リンクス・オブ・ダークネス"
+  }, {
+    key: "zeromus",
+    duty: "極ゼロムス討滅戦",
+    mount: "リンクス・オブ・アビス"
+  }]
+}, {
+  id: "dt",
+  kind: "ex",
+  label: "黄金のレガシー",
+  tag: "極",
+  accent: "#e6c34d",
+  reward: {
+    name: "ウィング・オブ・レガシー",
+    note: "翼7種コンプ"
+  },
+  rows: [{
+    key: "valigarmanda",
+    duty: "極ヴァリガルマンダ討滅戦",
+    mount: "ウィング・オブ・ディザスター"
+  }, {
+    key: "zoraal",
+    duty: "極ゾラージャ討滅戦",
+    mount: "ウィング・オブ・リゾルヴ"
+  }, {
+    key: "queen",
+    duty: "極エターナルクイーン討滅戦",
+    mount: "ウィング・オブ・エターナル"
+  }, {
+    key: "zelenia",
+    duty: "極ゼレニア討滅戦",
+    mount: "ウィング・オブ・ナイトフッド"
+  }, {
+    key: "eternaldark",
+    duty: "極永遠の闇討滅戦",
+    mount: "ウィング・オブ・デス"
+  }, {
+    key: "gurfurlur",
+    duty: "極グラシャラボラス討滅戦",
+    mount: "ウィング・オブ・ミスト"
+  }, {
+    key: "enuo",
+    duty: "極エヌオー討滅戦",
+    mount: "ウィング・オブ・ニヒリティ"
+  }]
+},
+// ---------------- 零式 ----------------
+{
+  id: "alex",
+  kind: "sav",
+  label: "機工城アレキサンダー零式",
+  tag: "零式",
+  sub: "蒼天",
+  accent: "#5db1e0",
+  rows: [{
+    key: "sav_goblin",
+    duty: "起動編4層",
+    mount: "ゴブリウォーカー"
+  }, {
+    key: "sav_arrhidaeus",
+    duty: "天動編4層",
+    mount: "アリダイオス"
+  }]
+}, {
+  id: "omega",
+  kind: "sav",
+  label: "次元の狭間オメガ零式",
+  tag: "零式",
+  sub: "紅蓮",
+  accent: "#e8615a",
+  rows: [{
+    key: "sav_arroitte",
+    duty: "デルタ編4層",
+    mount: "アルテ・ロイテ"
+  }, {
+    key: "sav_airforce",
+    duty: "シグマ編4層",
+    mount: "エアフォース"
+  }, {
+    key: "sav_omega",
+    duty: "アルファ編4層",
+    mount: "オメガ"
+  }]
+}, {
+  id: "eden",
+  kind: "sav",
+  label: "希望の園エデン零式",
+  tag: "零式",
+  sub: "漆黒",
+  accent: "#8b6fc7",
+  rows: [{
+    key: "sav_hover",
+    duty: "覚醒編4層",
+    mount: "ホバー船"
+  }, {
+    key: "sav_ramuh",
+    duty: "共鳴編4層",
+    mount: "ラムウ"
+  }, {
+    key: "sav_eden",
+    duty: "再生編4層",
+    mount: "エデン"
+  }]
+}, {
+  id: "pande",
+  kind: "sav",
+  label: "万魔殿パンデモニウム零式",
+  tag: "零式",
+  sub: "暁月",
+  accent: "#5fc9b0",
+  rows: [{
+    key: "sav_demiphoenix",
+    duty: "辺獄編4層",
+    mount: "デミフェネクス"
+  }, {
+    key: "sav_firebeast",
+    duty: "煉獄編4層",
+    mount: "炎霊獣"
+  }, {
+    key: "sav_megalo",
+    duty: "天獄編4層",
+    mount: "メガロアンビストマ"
+  }]
+}, {
+  id: "arca",
+  kind: "sav",
+  label: "至天の座アルカディア零式",
+  tag: "零式",
+  sub: "黄金",
+  accent: "#e6c34d",
+  rows: [{
+    key: "sav_mono",
+    duty: "ライトヘビー級4層",
+    mount: "モノホイールS1"
+  }, {
+    key: "sav_air",
+    duty: "クルーザー級4層",
+    mount: "エアスピナーC9"
+  }, {
+    key: "sav_low",
+    duty: "ヘビー級4層",
+    mount: "ローライダーT1"
+  }]
+}];
+const ALL_KEYS = GROUPS.flatMap(g => g.rows.map(r => r.key));
+const TOTAL = ALL_KEYS.length;
+
+/* パッチ（拡張）対応表 */
+const EXP_BY_ID = {
+  arr: "新生",
+  hw: "蒼天",
+  sb: "紅蓮",
+  shb: "漆黒",
+  ew: "暁月",
+  dt: "黄金",
+  alex: "蒼天",
+  omega: "紅蓮",
+  eden: "漆黒",
+  pande: "暁月",
+  arca: "黄金"
+};
+const EXPANSIONS = ["新生", "蒼天", "紅蓮", "漆黒", "暁月", "黄金"];
+
+/* ---------------- 永続ストレージ（localStorage） ---------------- */
+const memStore = {};
+const store = {
+  async get(key) {
+    try {
+      return localStorage.getItem(key);
+    } catch (_) {
+      return memStore[key] ?? null;
+    }
+  },
+  async set(key, value) {
+    try {
+      localStorage.setItem(key, value);
+    } catch (_) {
+      memStore[key] = value;
+    }
+  }
+};
+const SKEY = "mountcheck:v2";
+
+/* ---------------- 共有コード（2bit/件 → base64url） ---------------- */
+function encodeState(unlocked, owned) {
+  const bits = [];
+  ALL_KEYS.forEach(k => {
+    bits.push(unlocked[k] ? 1 : 0);
+    bits.push(owned[k] ? 1 : 0);
+  });
+  const bytes = [];
+  for (let i = 0; i < bits.length; i += 8) {
+    let b = 0;
+    for (let j = 0; j < 8; j++) b = b << 1 | (bits[i + j] || 0);
+    bytes.push(b);
+  }
+  let bin = "";
+  bytes.forEach(b => {
+    bin += String.fromCharCode(b);
+  });
+  const b64 = btoa(bin).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+  return "v1." + b64;
+}
+function decodeState(code) {
+  const raw = String(code).trim().replace(/.*v1\./s, "");
+  let b64 = raw.replace(/-/g, "+").replace(/_/g, "/");
+  while (b64.length % 4) b64 += "=";
+  const bin = atob(b64);
+  const bits = [];
+  for (let i = 0; i < bin.length; i++) {
+    const b = bin.charCodeAt(i);
+    for (let j = 7; j >= 0; j--) bits.push(b >> j & 1);
+  }
+  const unlocked = {},
+    owned = {};
+  ALL_KEYS.forEach((k, idx) => {
+    unlocked[k] = !!bits[idx * 2];
+    owned[k] = !!bits[idx * 2 + 1];
+  });
+  return {
+    unlocked,
+    owned
+  };
+}
+
+/* ============================================================ */
+function App() {
+  const [unlocked, setUnlocked] = useState({});
+  const [owned, setOwned] = useState({});
+  const [loaded, setLoaded] = useState(false);
+  const [view, setView] = useState("normal"); // normal | shot
+  const [kindFilter, setKindFilter] = useState("all"); // all | ex | sav
+  const [expFilter, setExpFilter] = useState("all"); // all | 新生 | 蒼天 | ...
+  const [showSettings, setShowSettings] = useState(false);
+  const [shareCode, setShareCode] = useState("");
+  const [importCode, setImportCode] = useState("");
+  const [copied, setCopied] = useState(false);
+  const [copyMsg, setCopyMsg] = useState("");
+  const [importMsg, setImportMsg] = useState("");
+  const shareRef = useRef(null);
+
+  /* 読み込み */
+  useEffect(() => {
+    (async () => {
+      const raw = await store.get(SKEY);
+      if (raw) {
+        try {
+          const d = JSON.parse(raw);
+          setUnlocked(d.unlocked || {});
+          setOwned(d.owned || {});
+        } catch (_) {}
+      }
+      setLoaded(true);
+    })();
+  }, []);
+
+  /* 保存：書き込みはまとめて行う（連打でブリッジ呼び出しが詰まらないように） */
+  const stateRef = useRef({
+    unlocked: {},
+    owned: {}
+  });
+  const writeTimer = useRef(null);
+  const writeNow = useCallback((u, o) => {
+    store.set(SKEY, JSON.stringify({
+      unlocked: u,
+      owned: o,
+      savedAt: Date.now()
+    }));
+  }, []);
+  const flushNow = useCallback(() => {
+    if (writeTimer.current) {
+      clearTimeout(writeTimer.current);
+      writeTimer.current = null;
+    }
+    writeNow(stateRef.current.unlocked, stateRef.current.owned);
+  }, [writeNow]);
+  const persist = useCallback((u, o) => {
+    stateRef.current = {
+      unlocked: u,
+      owned: o
+    };
+    if (writeTimer.current) clearTimeout(writeTimer.current);
+    writeTimer.current = setTimeout(() => {
+      writeTimer.current = null;
+      writeNow(u, o);
+    }, 500);
+  }, [writeNow]);
+
+  /* 離脱・非表示時に確実に書き込む */
+  useEffect(() => {
+    const onHide = () => {
+      if (document.visibilityState === "hidden") flushNow();
+    };
+    document.addEventListener("visibilitychange", onHide);
+    window.addEventListener("pagehide", flushNow);
+    return () => {
+      document.removeEventListener("visibilitychange", onHide);
+      window.removeEventListener("pagehide", flushNow);
+      flushNow();
+    };
+  }, [flushNow]);
+
+  /* 取得トグル：ONにしたら解放も自動ON */
+  const toggleOwned = key => {
+    const nextOwned = {
+      ...owned,
+      [key]: !owned[key]
+    };
+    const nextUnlocked = {
+      ...unlocked
+    };
+    if (nextOwned[key]) nextUnlocked[key] = true;
+    setOwned(nextOwned);
+    setUnlocked(nextUnlocked);
+    persist(nextUnlocked, nextOwned);
+  };
+  /* 解放トグル：OFFにしたら取得も自動OFF */
+  const toggleUnlocked = key => {
+    const nextUnlocked = {
+      ...unlocked,
+      [key]: !unlocked[key]
+    };
+    const nextOwned = {
+      ...owned
+    };
+    if (!nextUnlocked[key]) nextOwned[key] = false;
+    setUnlocked(nextUnlocked);
+    setOwned(nextOwned);
+    persist(nextUnlocked, nextOwned);
+  };
+  const resetAll = () => {
+    setUnlocked({});
+    setOwned({});
+    stateRef.current = {
+      unlocked: {},
+      owned: {}
+    };
+    writeNow({}, {});
+  };
+  const genShare = () => {
+    const code = encodeState(unlocked, owned);
+    setShareCode(code);
+    setCopied(false);
+    setCopyMsg("");
+  };
+  const selectShareField = () => {
+    const el = shareRef.current;
+    if (el) {
+      el.focus();
+      el.select();
+      try {
+        el.setSelectionRange(0, el.value.length);
+      } catch (_) {}
+    }
+  };
+  const copyShare = async () => {
+    const code = shareCode || encodeState(unlocked, owned);
+    setShareCode(code);
+    await new Promise(r => setTimeout(r, 0));
+    selectShareField();
+    let ok = false;
+    try {
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        await navigator.clipboard.writeText(code);
+        ok = true;
+      }
+    } catch (_) {}
+    if (!ok) {
+      try {
+        ok = document.execCommand && document.execCommand("copy");
+      } catch (_) {}
+    }
+    if (ok) {
+      setCopied(true);
+      setCopyMsg("");
+      setTimeout(() => setCopied(false), 1800);
+    } else {
+      selectShareField();
+      setCopyMsg("自動コピーがブロックされました。上の欄が選択済みなので、Ctrl/⌘+C でコピーしてください。");
+    }
+  };
+  const applyImport = () => {
+    try {
+      const {
+        unlocked: u,
+        owned: o
+      } = decodeState(importCode);
+      setUnlocked(u);
+      setOwned(o);
+      stateRef.current = {
+        unlocked: u,
+        owned: o
+      };
+      writeNow(u, o);
+      setImportMsg("読み込みました。");
+      setTimeout(() => setImportMsg(""), 2000);
+    } catch (_) {
+      setImportMsg("コードを解釈できませんでした。");
+      setTimeout(() => setImportMsg(""), 2500);
+    }
+  };
+
+  /* 集計 */
+  const counts = useMemo(() => {
+    const c = {};
+    GROUPS.forEach(g => {
+      const got = g.rows.filter(r => owned[r.key]).length;
+      const unl = g.rows.filter(r => unlocked[r.key]).length;
+      c[g.id] = {
+        got,
+        unl,
+        total: g.rows.length,
+        complete: got === g.rows.length
+      };
+    });
+    c.allOwned = ALL_KEYS.filter(k => owned[k]).length;
+    c.allUnl = ALL_KEYS.filter(k => unlocked[k]).length;
+    c.exOwned = GROUPS.filter(g => g.kind === "ex").flatMap(g => g.rows).filter(r => owned[r.key]).length;
+    c.savOwned = GROUPS.filter(g => g.kind === "sav").flatMap(g => g.rows).filter(r => owned[r.key]).length;
+    return c;
+  }, [owned, unlocked]);
+  const exTotal = GROUPS.filter(g => g.kind === "ex").reduce((a, g) => a + g.rows.length, 0);
+  const savTotal = TOTAL - exTotal;
+  const visibleGroups = GROUPS.filter(g => (kindFilter === "all" || g.kind === kindFilter) && (expFilter === "all" || EXP_BY_ID[g.id] === expFilter));
+  if (!loaded) return /*#__PURE__*/React.createElement("div", {
+    style: S.page
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      padding: 40,
+      color: "#8a93ab"
+    }
+  }, "読み込み中…"));
+  return /*#__PURE__*/React.createElement("div", {
+    style: S.page
+  }, /*#__PURE__*/React.createElement("style", null, CSS), /*#__PURE__*/React.createElement("header", {
+    style: S.header
+  }, /*#__PURE__*/React.createElement("div", {
+    style: S.headInner
+  }, /*#__PURE__*/React.createElement("div", {
+    style: S.crystal
+  }, /*#__PURE__*/React.createElement(Sparkles, {
+    size: 18
+  })), /*#__PURE__*/React.createElement("div", {
+    style: {
+      flex: 1,
+      minWidth: 0
+    }
+  }, /*#__PURE__*/React.createElement("h1", {
+    style: S.h1
+  }, "マウント取得チェックリスト"), /*#__PURE__*/React.createElement("p", {
+    style: S.sub
+  }, "極蛮神", exTotal, "種＋零式", savTotal, "種・解放/取得を記録")), /*#__PURE__*/React.createElement("button", {
+    style: {
+      ...S.iconBtn,
+      ...(view === "shot" ? S.iconBtnOn : {})
+    },
+    onClick: () => setView(view === "shot" ? "normal" : "shot"),
+    title: "スクショ用表示"
+  }, view === "shot" ? /*#__PURE__*/React.createElement(List, {
+    size: 17
+  }) : /*#__PURE__*/React.createElement(Camera, {
+    size: 17
+  })), /*#__PURE__*/React.createElement("button", {
+    style: {
+      ...S.iconBtn,
+      ...(showSettings ? S.iconBtnOn : {})
+    },
+    onClick: () => setShowSettings(v => !v),
+    title: "保存・共有・設定"
+  }, /*#__PURE__*/React.createElement(Settings2, {
+    size: 17
+  })))), /*#__PURE__*/React.createElement("main", {
+    style: S.main
+  }, /*#__PURE__*/React.createElement("section", {
+    style: S.progressWrap
+  }, /*#__PURE__*/React.createElement("div", {
+    style: S.progressTop
+  }, /*#__PURE__*/React.createElement("span", {
+    style: S.progressLabel
+  }, "取得済み（全体）"), /*#__PURE__*/React.createElement("span", {
+    style: S.progressNum
+  }, counts.allOwned, /*#__PURE__*/React.createElement("span", {
+    style: S.progressDen
+  }, " / ", TOTAL))), /*#__PURE__*/React.createElement("div", {
+    style: S.track
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      ...S.fill,
+      width: `${counts.allOwned / TOTAL * 100}%`
+    }
+  })), /*#__PURE__*/React.createElement("div", {
+    style: S.subCounts
+  }, /*#__PURE__*/React.createElement("span", null, "極蛮神 ", counts.exOwned, "/", exTotal), /*#__PURE__*/React.createElement("span", null, "零式 ", counts.savOwned, "/", savTotal), /*#__PURE__*/React.createElement("span", null, "解放済み ", counts.allUnl, "/", TOTAL))), showSettings && /*#__PURE__*/React.createElement("section", {
+    style: S.panel
+  }, /*#__PURE__*/React.createElement("div", {
+    style: S.panelTitle
+  }, "状態の保存・共有"), /*#__PURE__*/React.createElement("p", {
+    style: S.panelHint
+  }, "チェックはこの端末に自動保存されます。下の", /*#__PURE__*/React.createElement("b", null, "共有コード"), "をコピーしておけば、別の端末や別の人に渡して同じ状態を復元できます。"), /*#__PURE__*/React.createElement("div", {
+    style: S.codeRow
+  }, /*#__PURE__*/React.createElement("input", {
+    ref: shareRef,
+    style: S.codeInput,
+    readOnly: true,
+    value: shareCode,
+    placeholder: "「コード生成」を押すと表示されます",
+    onFocus: e => e.target.select()
+  }), /*#__PURE__*/React.createElement("button", {
+    style: S.smallBtn,
+    onClick: genShare
+  }, "コード生成"), /*#__PURE__*/React.createElement("button", {
+    style: {
+      ...S.smallBtn,
+      ...S.primaryBtn
+    },
+    onClick: copyShare
+  }, /*#__PURE__*/React.createElement(Copy, {
+    size: 13
+  }), " ", copied ? "コピー済" : "コピー")), copyMsg && /*#__PURE__*/React.createElement("div", {
+    style: S.copyMsg
+  }, copyMsg), /*#__PURE__*/React.createElement("div", {
+    style: S.codeRow
+  }, /*#__PURE__*/React.createElement("input", {
+    style: S.codeInput,
+    value: importCode,
+    onChange: e => setImportCode(e.target.value),
+    placeholder: "共有コードを貼り付けて読み込み"
+  }), /*#__PURE__*/React.createElement("button", {
+    style: S.smallBtn,
+    onClick: applyImport
+  }, /*#__PURE__*/React.createElement(ClipboardPaste, {
+    size: 13
+  }), " 読み込む")), importMsg && /*#__PURE__*/React.createElement("div", {
+    style: S.importMsg
+  }, importMsg), /*#__PURE__*/React.createElement("button", {
+    style: S.resetBtn,
+    onClick: resetAll
+  }, /*#__PURE__*/React.createElement(RotateCcw, {
+    size: 13
+  }), " すべてのチェックをリセット")), view === "normal" && /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
+    style: S.filterRow
+  }, /*#__PURE__*/React.createElement("span", {
+    style: S.filterLabel
+  }, "種別"), [["all", "すべて"], ["ex", "極蛮神"], ["sav", "零式"]].map(([k, lbl]) => /*#__PURE__*/React.createElement("button", {
+    key: k,
+    style: {
+      ...S.filterChip,
+      ...(kindFilter === k ? S.filterChipActive : {})
+    },
+    onClick: () => setKindFilter(k)
+  }, lbl))), /*#__PURE__*/React.createElement("div", {
+    style: S.filterRow
+  }, /*#__PURE__*/React.createElement("span", {
+    style: S.filterLabel
+  }, "パッチ"), /*#__PURE__*/React.createElement("button", {
+    style: {
+      ...S.filterChip,
+      ...(expFilter === "all" ? S.filterChipActive : {})
+    },
+    onClick: () => setExpFilter("all")
+  }, "すべて"), EXPANSIONS.map(e => /*#__PURE__*/React.createElement("button", {
+    key: e,
+    style: {
+      ...S.filterChip,
+      ...(expFilter === e ? S.filterChipActive : {})
+    },
+    onClick: () => setExpFilter(e)
+  }, e))), /*#__PURE__*/React.createElement("div", {
+    style: S.legendRow
+  }, "各行右の ", /*#__PURE__*/React.createElement("b", {
+    style: {
+      color: "#7f8cff"
+    }
+  }, "解放"), " ＝コンテンツ解放 / ", /*#__PURE__*/React.createElement("b", {
+    style: {
+      color: "#e6c34d"
+    }
+  }, "取得"), " ＝マウント入手（取得にすると解放も自動ON）"), visibleGroups.length === 0 && /*#__PURE__*/React.createElement("div", {
+    style: S.emptyNote
+  }, "この条件に該当するコンテンツはありません（新生編に零式マウントはありません）。"), /*#__PURE__*/React.createElement("div", {
+    style: S.grid
+  }, visibleGroups.map(g => {
+    const c = counts[g.id];
+    return /*#__PURE__*/React.createElement("section", {
+      key: g.id,
+      style: {
+        ...S.col,
+        borderTop: `3px solid ${g.accent}`
+      }
+    }, /*#__PURE__*/React.createElement("div", {
+      style: S.colHead
+    }, /*#__PURE__*/React.createElement("div", {
+      style: {
+        minWidth: 0
+      }
+    }, /*#__PURE__*/React.createElement("span", {
+      style: {
+        ...S.kindTag,
+        color: g.accent,
+        borderColor: g.accent
+      }
+    }, g.tag), /*#__PURE__*/React.createElement("h2", {
+      style: S.colTitle
+    }, g.label)), /*#__PURE__*/React.createElement("span", {
+      style: {
+        ...S.colCount,
+        color: g.accent
+      }
+    }, c.got, "/", c.total)), /*#__PURE__*/React.createElement("ul", {
+      style: S.list
+    }, g.rows.map(m => {
+      const has = !!owned[m.key];
+      const unl = !!unlocked[m.key];
+      return /*#__PURE__*/React.createElement("li", {
+        key: m.key,
+        style: {
+          ...S.item,
+          background: has ? hexA(g.accent, 0.13) : unl ? "rgba(127,140,255,0.06)" : "transparent"
+        }
+      }, /*#__PURE__*/React.createElement("div", {
+        style: S.itemText
+      }, /*#__PURE__*/React.createElement("div", {
+        style: {
+          ...S.duty,
+          ...(has ? {
+            color: "#eef3fb"
+          } : {})
+        }
+      }, m.duty), /*#__PURE__*/React.createElement("div", {
+        style: S.mountName
+      }, m.mount)), /*#__PURE__*/React.createElement("div", {
+        style: S.toggles
+      }, /*#__PURE__*/React.createElement("button", {
+        style: {
+          ...S.pill,
+          ...(unl ? S.pillUnlockOn : {})
+        },
+        onClick: () => toggleUnlocked(m.key),
+        title: "コンテンツを解放した"
+      }, unl && /*#__PURE__*/React.createElement(Check, {
+        size: 11,
+        strokeWidth: 3.5
+      }), " 解放"), /*#__PURE__*/React.createElement("button", {
+        style: {
+          ...S.pill,
+          ...(has ? {
+            ...S.pillOwnedOn,
+            background: g.accent,
+            borderColor: g.accent
+          } : {})
+        },
+        onClick: () => toggleOwned(m.key),
+        title: "マウントを取得した"
+      }, has && /*#__PURE__*/React.createElement(Check, {
+        size: 11,
+        strokeWidth: 3.5
+      }), " 取得")));
+    })), g.reward && /*#__PURE__*/React.createElement("div", {
+      style: {
+        ...S.reward,
+        ...(c.complete ? {
+          borderColor: "#e8c45e",
+          background: "rgba(232,196,94,0.10)"
+        } : {})
+      }
+    }, /*#__PURE__*/React.createElement(Crown, {
+      size: 15,
+      color: c.complete ? "#e8c45e" : "#566276"
+    }), /*#__PURE__*/React.createElement("div", {
+      style: {
+        flex: 1,
+        minWidth: 0
+      }
+    }, /*#__PURE__*/React.createElement("div", {
+      style: {
+        ...S.rewardName,
+        color: c.complete ? "#f3e5b0" : "#8a93ab"
+      }
+    }, g.reward.name), /*#__PURE__*/React.createElement("div", {
+      style: S.rewardNote
+    }, g.reward.note)), /*#__PURE__*/React.createElement("span", {
+      style: {
+        ...S.rewardState,
+        color: c.complete ? "#e8c45e" : "#566276"
+      }
+    }, c.complete ? "入手可" : `あと${c.total - c.got}`)));
+  }))), view === "shot" && /*#__PURE__*/React.createElement("section", {
+    style: S.shotBoard
+  }, /*#__PURE__*/React.createElement("div", {
+    style: S.shotHeader
+  }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
+    style: S.shotTitle
+  }, "FF14 マウント取得状況"), /*#__PURE__*/React.createElement("div", {
+    style: S.shotSummary
+  }, "取得 ", counts.allOwned, "/", TOTAL, "\u3000・\u3000極蛮神 ", counts.exOwned, "/", exTotal, "\u3000・\u3000零式 ", counts.savOwned, "/", savTotal)), /*#__PURE__*/React.createElement("div", {
+    style: S.shotLegend
+  }, /*#__PURE__*/React.createElement("span", {
+    style: S.lg
+  }, /*#__PURE__*/React.createElement("i", {
+    style: {
+      ...S.lgDot,
+      background: "#e6c34d"
+    }
+  }), "取得"), /*#__PURE__*/React.createElement("span", {
+    style: S.lg
+  }, /*#__PURE__*/React.createElement("i", {
+    style: {
+      ...S.lgDot,
+      background: "rgba(127,140,255,0.5)"
+    }
+  }), "解放のみ"), /*#__PURE__*/React.createElement("span", {
+    style: S.lg
+  }, /*#__PURE__*/React.createElement("i", {
+    style: {
+      ...S.lgDot,
+      background: "#243049",
+      border: "1px solid #33405e"
+    }
+  }), "未解放"))), /*#__PURE__*/React.createElement("div", {
+    style: S.shotGrid
+  }, GROUPS.map(g => {
+    const c = counts[g.id];
+    return /*#__PURE__*/React.createElement("div", {
+      key: g.id,
+      style: {
+        ...S.shotCard,
+        borderLeft: `3px solid ${g.accent}`
+      }
+    }, /*#__PURE__*/React.createElement("div", {
+      style: S.shotCardHead
+    }, /*#__PURE__*/React.createElement("span", {
+      style: {
+        ...S.shotTag,
+        color: g.accent
+      }
+    }, g.tag, g.sub ? `・${g.sub}` : ""), /*#__PURE__*/React.createElement("span", {
+      style: S.shotCardName
+    }, g.label), /*#__PURE__*/React.createElement("span", {
+      style: {
+        ...S.shotCardCount,
+        color: c.complete ? g.accent : "#8a93ab"
+      }
+    }, c.got, "/", c.total)), /*#__PURE__*/React.createElement("div", {
+      style: S.shotChips
+    }, g.rows.map(m => {
+      const has = !!owned[m.key];
+      const unl = !!unlocked[m.key];
+      const st = has ? {
+        background: hexA(g.accent, 0.92),
+        color: "#0c1322",
+        borderColor: g.accent
+      } : unl ? {
+        background: "rgba(127,140,255,0.14)",
+        color: "#c3c9ff",
+        borderColor: "rgba(127,140,255,0.5)"
+      } : {
+        background: "#1a2336",
+        color: "#5d6884",
+        borderColor: "#2a3650"
+      };
+      return /*#__PURE__*/React.createElement("span", {
+        key: m.key,
+        style: {
+          ...S.shotChip,
+          ...st
+        },
+        title: m.mount
+      }, has && /*#__PURE__*/React.createElement(Check, {
+        size: 10,
+        strokeWidth: 4,
+        style: {
+          marginRight: 2
+        }
+      }), m.duty);
+    })));
+  })), /*#__PURE__*/React.createElement("div", {
+    style: S.shotFooter
+  }, "マウント名はパッチ7.5時点のJP表記。新生編に零式マウントは実装なし。")), /*#__PURE__*/React.createElement("footer", {
+    style: S.footer
+  }, "チェックはこの端末に自動保存。歯車メニューの共有コードで他端末へ引き継げます。")));
+}
+
+/* hex + alpha → rgba */
+function hexA(hex, a) {
+  const h = hex.replace("#", "");
+  const r = parseInt(h.substring(0, 2), 16);
+  const g = parseInt(h.substring(2, 4), 16);
+  const b = parseInt(h.substring(4, 6), 16);
+  return `rgba(${r},${g},${b},${a})`;
+}
+
+/* ------------------------------- styles ------------------------------- */
+const CSS = `
+  ::placeholder{ color:#566276; }
+  * { box-sizing: border-box; }
+  button { -webkit-tap-highlight-color: transparent; }
+  button:focus, button:focus-visible, button:active { outline: none !important; box-shadow: none !important; }
+`;
+const S = {
+  page: {
+    minHeight: "100%",
+    background: "linear-gradient(180deg,#0a1120 0%,#0c1322 100%)",
+    color: "#eef3fb",
+    fontFamily: "'Hiragino Kaku Gothic ProN','Noto Sans JP',system-ui,sans-serif"
+  },
+  header: {
+    borderBottom: "1px solid #1d2840",
+    background: "rgba(12,19,34,0.85)",
+    backdropFilter: "blur(8px)",
+    position: "sticky",
+    top: 0,
+    zIndex: 10
+  },
+  headInner: {
+    maxWidth: 1100,
+    margin: "0 auto",
+    padding: "13px 18px",
+    display: "flex",
+    alignItems: "center",
+    gap: 10
+  },
+  crystal: {
+    width: 36,
+    height: 36,
+    borderRadius: 11,
+    background: "linear-gradient(135deg,#6f7bff,#9d6cff)",
+    display: "grid",
+    placeItems: "center",
+    color: "#fff",
+    flexShrink: 0,
+    boxShadow: "0 0 18px rgba(120,110,255,0.4)"
+  },
+  h1: {
+    margin: 0,
+    fontSize: 16.5,
+    fontWeight: 700
+  },
+  sub: {
+    margin: "2px 0 0",
+    fontSize: 11.5,
+    color: "#8a93ab"
+  },
+  iconBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 9,
+    border: "1px solid #2a3650",
+    background: "#131c2e",
+    color: "#aeb8d0",
+    cursor: "pointer",
+    display: "grid",
+    placeItems: "center",
+    flexShrink: 0
+  },
+  iconBtnOn: {
+    borderColor: "#6f7bff",
+    color: "#aeb6ff",
+    background: "#18203a"
+  },
+  main: {
+    maxWidth: 1100,
+    margin: "0 auto",
+    padding: "16px 18px 24px"
+  },
+  progressWrap: {
+    background: "#111a2c",
+    border: "1px solid #1f2b44",
+    borderRadius: 12,
+    padding: "13px 16px"
+  },
+  progressTop: {
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "baseline",
+    marginBottom: 9
+  },
+  progressLabel: {
+    fontSize: 12.5,
+    color: "#aeb8d0",
+    fontWeight: 600
+  },
+  progressNum: {
+    fontSize: 19,
+    fontWeight: 800,
+    color: "#eef3fb"
+  },
+  progressDen: {
+    fontSize: 13,
+    color: "#6c7790",
+    fontWeight: 600
+  },
+  track: {
+    height: 8,
+    borderRadius: 5,
+    background: "#0c1322",
+    overflow: "hidden",
+    border: "1px solid #1f2b44"
+  },
+  fill: {
+    height: "100%",
+    background: "linear-gradient(90deg,#6f7bff,#9d6cff)",
+    borderRadius: 5,
+    transition: "width .35s ease"
+  },
+  subCounts: {
+    display: "flex",
+    gap: 14,
+    flexWrap: "wrap",
+    marginTop: 9,
+    fontSize: 11.5,
+    color: "#8a93ab"
+  },
+  panel: {
+    marginTop: 14,
+    background: "#111a2c",
+    border: "1px solid #1f2b44",
+    borderRadius: 12,
+    padding: 15
+  },
+  panelTitle: {
+    fontSize: 13.5,
+    fontWeight: 700,
+    marginBottom: 7
+  },
+  panelHint: {
+    fontSize: 11.5,
+    color: "#8a93ab",
+    lineHeight: 1.7,
+    margin: "0 0 12px"
+  },
+  codeRow: {
+    display: "flex",
+    gap: 8,
+    marginBottom: 9,
+    flexWrap: "wrap"
+  },
+  codeInput: {
+    flex: 1,
+    minWidth: 180,
+    background: "#0c1322",
+    border: "1px solid #2a3650",
+    borderRadius: 8,
+    padding: "9px 11px",
+    color: "#cdd6ea",
+    fontSize: 12,
+    outline: "none",
+    fontFamily: "ui-monospace,monospace"
+  },
+  smallBtn: {
+    display: "inline-flex",
+    alignItems: "center",
+    gap: 5,
+    background: "#18233a",
+    color: "#cdd6ea",
+    border: "1px solid #2f3d5c",
+    borderRadius: 8,
+    padding: "9px 13px",
+    fontSize: 12,
+    fontWeight: 600,
+    cursor: "pointer",
+    whiteSpace: "nowrap"
+  },
+  primaryBtn: {
+    background: "linear-gradient(135deg,#6f7bff,#9d6cff)",
+    color: "#fff",
+    border: "none"
+  },
+  importMsg: {
+    fontSize: 11.5,
+    color: "#9fd6c0",
+    marginBottom: 8
+  },
+  copyMsg: {
+    fontSize: 11.5,
+    color: "#e6c34d",
+    margin: "-2px 0 9px",
+    lineHeight: 1.6
+  },
+  resetBtn: {
+    display: "inline-flex",
+    alignItems: "center",
+    gap: 6,
+    background: "#1a1322",
+    color: "#e09a9a",
+    border: "1px solid #4a2a3a",
+    borderRadius: 8,
+    padding: "8px 13px",
+    fontSize: 12,
+    fontWeight: 600,
+    cursor: "pointer",
+    marginTop: 4
+  },
+  filterRow: {
+    display: "flex",
+    gap: 7,
+    flexWrap: "wrap",
+    marginTop: 12,
+    alignItems: "center"
+  },
+  filterLabel: {
+    fontSize: 11,
+    color: "#6c7790",
+    fontWeight: 700,
+    marginRight: 2,
+    width: 36
+  },
+  filterChip: {
+    background: "#111a2c",
+    border: "1px solid #28344e",
+    color: "#aeb8d0",
+    borderRadius: 999,
+    padding: "6px 14px",
+    fontSize: 12.5,
+    fontWeight: 600,
+    cursor: "pointer"
+  },
+  filterChipActive: {
+    background: "#18233a",
+    color: "#eef3fb",
+    borderColor: "#3a496a"
+  },
+  legendRow: {
+    fontSize: 11,
+    color: "#7d88a3",
+    marginTop: 11,
+    lineHeight: 1.6
+  },
+  emptyNote: {
+    marginTop: 14,
+    fontSize: 12.5,
+    color: "#8a93ab",
+    background: "#111a2c",
+    border: "1px solid #1f2b44",
+    borderRadius: 10,
+    padding: "16px 18px",
+    textAlign: "center"
+  },
+  grid: {
+    marginTop: 14,
+    display: "grid",
+    gridTemplateColumns: "repeat(auto-fill,minmax(310px,1fr))",
+    gap: 14
+  },
+  col: {
+    background: "#111a2c",
+    border: "1px solid #1f2b44",
+    borderRadius: 14,
+    padding: "13px 14px 12px",
+    display: "flex",
+    flexDirection: "column"
+  },
+  colHead: {
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "flex-start",
+    gap: 8,
+    marginBottom: 8
+  },
+  kindTag: {
+    display: "inline-block",
+    fontSize: 10,
+    fontWeight: 700,
+    border: "1px solid",
+    borderRadius: 5,
+    padding: "0 5px",
+    marginRight: 7,
+    verticalAlign: "middle"
+  },
+  colTitle: {
+    margin: 0,
+    fontSize: 14,
+    fontWeight: 700,
+    display: "inline"
+  },
+  colCount: {
+    fontSize: 13,
+    fontWeight: 800,
+    flexShrink: 0
+  },
+  colSubHead: {
+    display: "none"
+  },
+  list: {
+    listStyle: "none",
+    margin: 0,
+    padding: 0,
+    display: "flex",
+    flexDirection: "column",
+    gap: 5,
+    flex: 1
+  },
+  item: {
+    display: "flex",
+    alignItems: "center",
+    gap: 9,
+    padding: "7px 9px",
+    borderRadius: 9,
+    transition: "background .15s"
+  },
+  itemText: {
+    flex: 1,
+    minWidth: 0
+  },
+  duty: {
+    fontSize: 12.5,
+    color: "#b3bcd2",
+    fontWeight: 600,
+    lineHeight: 1.3
+  },
+  mountName: {
+    fontSize: 11,
+    color: "#6c7790",
+    marginTop: 1
+  },
+  toggles: {
+    display: "flex",
+    gap: 6,
+    flexShrink: 0
+  },
+  pill: {
+    display: "inline-flex",
+    alignItems: "center",
+    gap: 3,
+    border: "1.5px solid #4d5872",
+    background: "rgba(10,16,28,0.55)",
+    color: "#aab4cc",
+    borderRadius: 7,
+    padding: "5px 9px",
+    fontSize: 11.5,
+    fontWeight: 700,
+    cursor: "pointer",
+    whiteSpace: "nowrap",
+    outline: "none",
+    WebkitTapHighlightColor: "transparent"
+  },
+  pillUnlockOn: {
+    borderColor: "#7f8cff",
+    background: "rgba(127,140,255,0.24)",
+    color: "#c7cdff"
+  },
+  pillOwnedOn: {
+    color: "#0c1322"
+  },
+  reward: {
+    display: "flex",
+    alignItems: "center",
+    gap: 9,
+    marginTop: 10,
+    padding: "8px 10px",
+    borderRadius: 10,
+    border: "1px dashed #2f3a54",
+    background: "rgba(255,255,255,0.02)"
+  },
+  rewardName: {
+    fontSize: 12,
+    fontWeight: 700,
+    lineHeight: 1.25,
+    overflow: "hidden",
+    textOverflow: "ellipsis",
+    whiteSpace: "nowrap"
+  },
+  rewardNote: {
+    fontSize: 10.5,
+    color: "#6c7790",
+    marginTop: 1
+  },
+  rewardState: {
+    fontSize: 11,
+    fontWeight: 700,
+    flexShrink: 0
+  },
+  /* スクショ用 */
+  shotBoard: {
+    marginTop: 14,
+    background: "#0e1626",
+    border: "1px solid #1f2b44",
+    borderRadius: 14,
+    padding: 16
+  },
+  shotHeader: {
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "flex-start",
+    gap: 12,
+    flexWrap: "wrap",
+    marginBottom: 12,
+    paddingBottom: 12,
+    borderBottom: "1px solid #1d2840"
+  },
+  shotTitle: {
+    fontSize: 15,
+    fontWeight: 800
+  },
+  shotSummary: {
+    fontSize: 12,
+    color: "#aeb8d0",
+    marginTop: 4
+  },
+  shotLegend: {
+    display: "flex",
+    gap: 12,
+    flexWrap: "wrap"
+  },
+  lg: {
+    display: "inline-flex",
+    alignItems: "center",
+    gap: 5,
+    fontSize: 11,
+    color: "#8a93ab"
+  },
+  lgDot: {
+    width: 11,
+    height: 11,
+    borderRadius: 3,
+    display: "inline-block"
+  },
+  shotGrid: {
+    display: "grid",
+    gridTemplateColumns: "repeat(auto-fill,minmax(330px,1fr))",
+    gap: 9
+  },
+  shotCard: {
+    background: "#121b2c",
+    borderRadius: 9,
+    padding: "9px 11px"
+  },
+  shotCardHead: {
+    display: "flex",
+    alignItems: "baseline",
+    gap: 7,
+    marginBottom: 7
+  },
+  shotTag: {
+    fontSize: 10,
+    fontWeight: 700,
+    flexShrink: 0
+  },
+  shotCardName: {
+    fontSize: 12,
+    fontWeight: 700,
+    color: "#dbe2f0",
+    flex: 1,
+    minWidth: 0,
+    overflow: "hidden",
+    textOverflow: "ellipsis",
+    whiteSpace: "nowrap"
+  },
+  shotCardCount: {
+    fontSize: 11.5,
+    fontWeight: 800,
+    flexShrink: 0
+  },
+  shotChips: {
+    display: "flex",
+    flexWrap: "wrap",
+    gap: 4
+  },
+  shotChip: {
+    display: "inline-flex",
+    alignItems: "center",
+    fontSize: 10.5,
+    fontWeight: 600,
+    padding: "2px 7px",
+    borderRadius: 6,
+    border: "1px solid",
+    lineHeight: 1.4
+  },
+  shotFooter: {
+    marginTop: 12,
+    fontSize: 10.5,
+    color: "#5f6a83"
+  },
+  footer: {
+    marginTop: 20,
+    fontSize: 11,
+    color: "#5f6a83",
+    lineHeight: 1.7,
+    textAlign: "center"
+  }
+};
+const _root = ReactDOM.createRoot(document.getElementById("root"));
+_root.render(React.createElement(App));
+</script>
+</body>
+</html>
