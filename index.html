@@ -4,7 +4,7 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
 <title>FF14 マウント取得チェックリスト</title>
-<meta name="description" content="FF14の極蛮神・零式マウントの解放/取得を記録できるチェックリスト。" />
+<meta name="description" content="FF14の極蛮神・零式マウントの開放/取得を記録できるチェックリスト。" />
 <style>
   html, body { height: 100%; }
   body { margin: 0; background: #0c1322; }
@@ -655,7 +655,7 @@ function App() {
     };
   }, [flushNow]);
 
-  /* 取得トグル：ONにしたら解放も自動ON */
+  /* 取得トグル：ONにしたら開放も自動ON */
   const toggleOwned = key => {
     const nextOwned = {
       ...owned,
@@ -669,7 +669,7 @@ function App() {
     setUnlocked(nextUnlocked);
     persist(nextUnlocked, nextOwned);
   };
-  /* 解放トグル：OFFにしたら取得も自動OFF */
+  /* 開放トグル：OFFにしたら取得も自動OFF */
   const toggleUnlocked = key => {
     const nextUnlocked = {
       ...unlocked,
@@ -803,7 +803,7 @@ function App() {
     style: S.h1
   }, "マウント取得チェックリスト"), /*#__PURE__*/React.createElement("p", {
     style: S.sub
-  }, "極蛮神", exTotal, "種＋零式", savTotal, "種・解放/取得を記録")), /*#__PURE__*/React.createElement("button", {
+  }, "極蛮神", exTotal, "種＋零式", savTotal, "種・開放/取得を記録")), /*#__PURE__*/React.createElement("button", {
     style: {
       ...S.iconBtn,
       ...(view === "shot" ? S.iconBtnOn : {})
@@ -844,7 +844,7 @@ function App() {
     }
   })), /*#__PURE__*/React.createElement("div", {
     style: S.subCounts
-  }, /*#__PURE__*/React.createElement("span", null, "極蛮神 ", counts.exOwned, "/", exTotal), /*#__PURE__*/React.createElement("span", null, "零式 ", counts.savOwned, "/", savTotal), /*#__PURE__*/React.createElement("span", null, "解放済み ", counts.allUnl, "/", TOTAL))), showSettings && /*#__PURE__*/React.createElement("section", {
+  }, /*#__PURE__*/React.createElement("span", null, "極蛮神 ", counts.exOwned, "/", exTotal), /*#__PURE__*/React.createElement("span", null, "零式 ", counts.savOwned, "/", savTotal), /*#__PURE__*/React.createElement("span", null, "開放済み ", counts.allUnl, "/", TOTAL))), showSettings && /*#__PURE__*/React.createElement("section", {
     style: S.panel
   }, /*#__PURE__*/React.createElement("div", {
     style: S.panelTitle
@@ -925,11 +925,11 @@ function App() {
     style: {
       color: "#7f8cff"
     }
-  }, "解放"), " ＝コンテンツ解放 / ", /*#__PURE__*/React.createElement("b", {
+  }, "開放"), " ＝コンテンツ開放 / ", /*#__PURE__*/React.createElement("b", {
     style: {
       color: "#e6c34d"
     }
-  }, "取得"), " ＝マウント入手（取得にすると解放も自動ON）"), visibleGroups.length === 0 && /*#__PURE__*/React.createElement("div", {
+  }, "取得"), " ＝マウント入手（取得にすると開放も自動ON）"), visibleGroups.length === 0 && /*#__PURE__*/React.createElement("div", {
     style: S.emptyNote
   }, "この条件に該当するコンテンツはありません（新生編に零式マウントはありません）。"), /*#__PURE__*/React.createElement("div", {
     style: S.grid
@@ -993,11 +993,11 @@ function App() {
           e.currentTarget.blur();
           toggleUnlocked(m.key);
         },
-        title: "コンテンツを解放した"
+        title: "コンテンツを開放した"
       }, unl && /*#__PURE__*/React.createElement(Check, {
         size: 11,
         strokeWidth: 3.5
-      }), " 解放"), /*#__PURE__*/React.createElement("button", {
+      }), " 開放"), /*#__PURE__*/React.createElement("button", {
         style: {
           ...S.pill,
           ...(has ? {
@@ -1068,7 +1068,7 @@ function App() {
       ...S.lgDot,
       background: "rgba(127,140,255,0.5)"
     }
-  }), "解放のみ"), /*#__PURE__*/React.createElement("span", {
+  }), "開放のみ"), /*#__PURE__*/React.createElement("span", {
     style: S.lg
   }, /*#__PURE__*/React.createElement("i", {
     style: {
@@ -1076,7 +1076,7 @@ function App() {
       background: "#243049",
       border: "1px solid #33405e"
     }
-  }), "未解放"))), /*#__PURE__*/React.createElement("div", {
+  }), "未開放"))), /*#__PURE__*/React.createElement("div", {
     style: S.shotGrid
   }, GROUPS.map(g => {
     const c = counts[g.id];
