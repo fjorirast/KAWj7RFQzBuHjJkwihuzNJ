@@ -159,6 +159,7 @@ const TYPES = [{
   groups: [{
     id: "arr",
     source: "極",
+    dual: true,
     patch: "新生",
     label: "新生エオルゼア",
     accent: "#f0a04b",
@@ -194,6 +195,7 @@ const TYPES = [{
   }, {
     id: "hw",
     source: "極",
+    dual: true,
     patch: "蒼天",
     label: "蒼天のイシュガルド",
     accent: "#5db1e0",
@@ -233,6 +235,7 @@ const TYPES = [{
   }, {
     id: "sb",
     source: "極",
+    dual: true,
     patch: "紅蓮",
     label: "紅蓮のリベレーター",
     accent: "#e8615a",
@@ -272,6 +275,7 @@ const TYPES = [{
   }, {
     id: "shb",
     source: "極",
+    dual: true,
     patch: "漆黒",
     label: "漆黒のヴィランズ",
     accent: "#8b6fc7",
@@ -311,6 +315,7 @@ const TYPES = [{
   }, {
     id: "ew",
     source: "極",
+    dual: true,
     patch: "暁月",
     label: "暁月のフィナーレ",
     accent: "#5fc9b0",
@@ -350,6 +355,7 @@ const TYPES = [{
   }, {
     id: "dt",
     source: "極",
+    dual: true,
     patch: "黄金",
     label: "黄金のレガシー",
     accent: "#e6c34d",
@@ -389,6 +395,7 @@ const TYPES = [{
   }, {
     id: "alex",
     source: "零式",
+    dual: true,
     patch: "蒼天",
     label: "機工城アレキサンダー零式",
     accent: "#5db1e0",
@@ -404,6 +411,7 @@ const TYPES = [{
   }, {
     id: "omega",
     source: "零式",
+    dual: true,
     patch: "紅蓮",
     label: "次元の狭間オメガ零式",
     accent: "#e8615a",
@@ -423,6 +431,7 @@ const TYPES = [{
   }, {
     id: "eden",
     source: "零式",
+    dual: true,
     patch: "漆黒",
     label: "希望の園エデン零式",
     accent: "#8b6fc7",
@@ -442,6 +451,7 @@ const TYPES = [{
   }, {
     id: "pande",
     source: "零式",
+    dual: true,
     patch: "暁月",
     label: "万魔殿パンデモニウム零式",
     accent: "#5fc9b0",
@@ -461,6 +471,7 @@ const TYPES = [{
   }, {
     id: "arca",
     source: "零式",
+    dual: true,
     patch: "黄金",
     label: "至天の座アルカディア零式",
     accent: "#e6c34d",
@@ -1356,8 +1367,7 @@ function App() {
     };
   }, [flushNow]);
   const curType = TYPES.find(t => t.id === typeId);
-  const dual = !!curType?.dual;
-  const toggleOwned = key => {
+  const toggleOwned = (key, gDual) => {
     const no = {
       ...owned,
       [key]: !owned[key]
@@ -1365,7 +1375,7 @@ function App() {
     const nu = {
       ...unlocked
     };
-    if (dual && no[key]) nu[key] = true;
+    if (gDual && no[key]) nu[key] = true;
     setOwned(no);
     setUnlocked(nu);
     persist(nu, no);
@@ -1455,12 +1465,15 @@ function App() {
   const sources = useMemo(() => Array.from(new Set(typeGroups.map(g => g.source))), [typeGroups]);
   const patches = useMemo(() => Array.from(new Set(typeGroups.map(g => g.patch).filter(Boolean))), [typeGroups]);
   const visibleGroups = typeGroups.filter(g => (srcFilter === "all" || g.source === srcFilter) && (patchFilter === "all" || g.patch === patchFilter));
+  const typeDual = useMemo(() => typeGroups.some(g => g.dual), [typeGroups]);
   const typeCount = useMemo(() => {
     const keys = typeGroups.flatMap(g => g.rows.map(r => r.key));
+    const dualKeys = typeGroups.filter(g => g.dual).flatMap(g => g.rows.map(r => r.key));
     return {
       total: keys.length,
       got: keys.filter(k => owned[k]).length,
-      unl: keys.filter(k => unlocked[k]).length
+      unl: dualKeys.filter(k => unlocked[k]).length,
+      dualTotal: dualKeys.length
     };
   }, [typeGroups, owned, unlocked]);
   const groupCount = g => {
@@ -1562,9 +1575,9 @@ function App() {
       width: `${typeCount.total ? typeCount.got / typeCount.total * 100 : 0}%`,
       background: `linear-gradient(90deg, ${curType.accent}, ${hexA(curType.accent, 0.6)})`
     }
-  })), dual && /*#__PURE__*/React.createElement("div", {
+  })), typeDual && /*#__PURE__*/React.createElement("div", {
     style: S.subCounts
-  }, /*#__PURE__*/React.createElement("span", null, "開放済み ", typeCount.unl, "/", typeCount.total))), showSettings && /*#__PURE__*/React.createElement("section", {
+  }, /*#__PURE__*/React.createElement("span", null, "開放済み ", typeCount.unl, "/", typeCount.dualTotal))), showSettings && /*#__PURE__*/React.createElement("section", {
     style: S.panel
   }, /*#__PURE__*/React.createElement("div", {
     style: S.panelTitle
@@ -1646,7 +1659,7 @@ function App() {
       ...(patchFilter === p ? S.chipActive : {})
     },
     onClick: () => setPatchFilter(p)
-  }, p)))), dual && /*#__PURE__*/React.createElement("div", {
+  }, p)))), typeDual && /*#__PURE__*/React.createElement("div", {
     style: S.legendRow
   }, "各行右の ", /*#__PURE__*/React.createElement("b", {
     style: {
@@ -1656,7 +1669,7 @@ function App() {
     style: {
       color: "#e6c34d"
     }
-  }, "取得"), "＝入手（取得で開放も自動ON）"), /*#__PURE__*/React.createElement("div", {
+  }, "取得"), "＝入手（取得で開放も自動ON）。友好部族・FATE・アチーブ等は取得のみ。"), /*#__PURE__*/React.createElement("div", {
     style: {
       ...S.filterRow,
       marginTop: 8
@@ -1727,7 +1740,7 @@ function App() {
         style: S.itemSrc
       }, r.src) : null), /*#__PURE__*/React.createElement("div", {
         style: S.toggles
-      }, dual && /*#__PURE__*/React.createElement("button", {
+      }, g.dual && /*#__PURE__*/React.createElement("button", {
         style: {
           ...S.pill,
           ...(unl ? S.pillUnlockOn : {})
@@ -1751,7 +1764,7 @@ function App() {
         },
         onClick: e => {
           e.currentTarget.blur();
-          toggleOwned(r.key);
+          toggleOwned(r.key, g.dual);
         },
         title: "取得した"
       }, has && /*#__PURE__*/React.createElement(Check, {
@@ -1804,7 +1817,7 @@ function App() {
       ...S.lgDot,
       background: curType.accent
     }
-  }), "取得"), dual && /*#__PURE__*/React.createElement("span", {
+  }), "取得"), typeDual && /*#__PURE__*/React.createElement("span", {
     style: S.lg
   }, /*#__PURE__*/React.createElement("i", {
     style: {
@@ -1857,7 +1870,7 @@ function App() {
         background: hexA(g.accent, 0.92),
         color: "#0c1322",
         borderColor: g.accent
-      } : dual && unl ? {
+      } : g.dual && unl ? {
         background: "rgba(127,140,255,0.14)",
         color: "#c3c9ff",
         borderColor: "rgba(127,140,255,0.5)"
